@@ -1,0 +1,7 @@
+{
+  "name": "com.autojob.bridge",
+  "description": "autojob bridge to connect to local machine",
+  "path": "/Users/carl/Documents/GitHub/autojob/chrome-extension/python-scripts/connector.py",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://pfibgnmjbfdagmpjlghjgefcljdlfoih/"]
+}
