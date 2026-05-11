@@ -18,6 +18,9 @@
   // Debounce timer id
   let saveTimer = null;
 
+  // job link description 
+  let jobLink = '';
+
   // Milliseconds to wait after last mutation before saving
   const DEBOUNCE_MS = 1000;
 
@@ -29,6 +32,12 @@
     if (!savedText || savedText === previousText) return;
     previousText = savedText;
 
+
+    // add the job link to the saved text
+    if (jobLink) {
+      savedText += `\nJob Link: ${jobLink}`;
+    }
+
     console.log("Sending job details to Python...");
 
     // Send to Background Script instead of downloading
@@ -38,7 +47,7 @@
         payload: savedText,
         metadata: {
           url: window.location.href,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         }
       }, (response) => {
         if (chrome.runtime.lastError) {
@@ -72,6 +81,19 @@
   };
 
   const observer = new MutationObserver(onMutations);
+
+  // Track clicks on the specific element and store its href
+  document.addEventListener('click', (event) => {
+    const clickedElement = event.target;
+
+    // Check if the element is a <li>, if so extract href from <a> child
+    if (clickedElement.tagName === 'LI') {
+      const linkElement = clickedElement.querySelector('a');
+      jobLink = linkElement ? (linkElement.getAttribute('href') || linkElement.href || '') : '';
+    } else {
+      jobLink = clickedElement.getAttribute('href') || clickedElement.href || '';
+    }
+  }, true);
 
   // Start observing
   observer.observe(document.documentElement, observerOptions);

@@ -3,6 +3,10 @@ import sys
 import json
 import struct
 import os
+import requests 
+
+from ollama import chat 
+# we are using qwen2.5 1.5b in this case because its good to use
 
 # Set up absolute path for logging so you can actually see what's happening
 DEBUG_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +38,69 @@ def send_message(message_content):
     sys.stdout.buffer.write(encoded_content)
     sys.stdout.buffer.flush()
 
+def process_message(message): 
+    # feed job into llm 
+    log("processing raw job text with llm")
+    
+    prompt = f"""
+Extract this job posting into valid JSON.
+
+Fields:
+- company
+- title
+- location
+- employment_type
+- salary
+- skills
+- benefits
+- remote
+- description_summary
+- job_link (should be a linkedin job post url or a similar url)
+
+Return ONLY valid JSON in text form, do not return markdown, do not return any text other than the JSON.
+If missing, use null.
+
+job posting is as follows: \n{message}
+"""
+
+    llm_response = chat(
+        model="qwen2.5:1.5b",
+        messages=[{"role": "user", "content": prompt}],
+        format="json"
+    )
+    
+    llm_content = llm_response.message.content
+    log(llm_content)
+ 
+    llm_content_json = json.loads(llm_content)
+ 
+    data = {
+        "data": {
+            "id": "INCREMENT",
+            "company": llm_content_json.get("company"),
+            "title": llm_content_json.get("title"),
+            "location": llm_content_json.get("location"),
+            "employment_type": llm_content_json.get("employment_type"),
+            "salary": llm_content_json.get("salary"),
+            "skills": llm_content_json.get("skills"),
+            "benefits": llm_content_json.get("benefits"),
+            "remote": llm_content_json.get("remote"),
+            "description_summary": llm_content_json.get("description_summary"),
+            "job_link": llm_content_json.get("job_link")
+        }
+    }
+
+    response = requests.post("https://sheetdb.io/api/v1/t4urmwql3pez7", json=data)
+
+    if response.status_code == 201:
+        log("Data successfully sent to SheetDB.")
+    else:
+        log(f"Failed to send data to SheetDB. Status code: {response.status_code}, Response: {response.text}")
+
+
+    # log(f"LLM response: {llm_response}")
+
+
 log("--- Script Started ---")
 
 try:
@@ -44,6 +111,10 @@ try:
         log(f"---NEW JOB---")
         log(f"Message content: {msg}")
         log(f"---END OF JOB---")
+
+        # process the message 
+        process_message(msg)
+
         # Simple response back to Chrome
         send_message({"status": "success", "received_len": len(str(msg))})
         log("Response sent to Chrome.")
